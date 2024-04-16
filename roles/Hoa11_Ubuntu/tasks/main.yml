@@ -1,0 +1,77 @@
+
+- name: Update Ubuntu Package Cache
+  apt:
+    update_cache: yes
+    state: present
+
+- name: Install Docker Prerequisites on Ubuntu
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+  async: 3600
+  poll: 0
+
+- name: Add Docker GPG key on Ubuntu
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  async: 3600
+  poll: 0
+
+- name: Add Docker Repository on Ubuntu
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+    state: present
+    update_cache: yes
+  async: 3600
+  poll: 0
+
+- name: Install Docker on Ubuntu
+  apt:
+    name: docker-ce
+    state: present
+  async: 3600
+  poll: 0
+
+- name: Enable Docker Service on Ubuntu
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+
+- name: Add a Docker Group to my Current User on Ubuntu
+  user:
+    name: msdomondon
+    groups: docker
+    append: yes
+
+- name: Copy dockerfile on Ubuntu
+  copy:
+    src: dockerfile
+    dest: /var/app/dockerfile
+
+- name: Install and Build Dockerfile on Ubuntu
+  command: "docker build -t dockerimage:tag /var/app/dockerfile"
+
+- name: Create + running the web server
+  docker_container:
+    name: apache2-container
+    image: httpd:2.4
+    ports:
+      - "8080:8080"
+    state: started
+
+- name: Create + running db server container
+  docker_container:
+    name: mysql-container
+    image: mysql:latest
+    env:
+      MYSQL_ROOT_PASSWORD: katenze88
+    ports:
+      - "3206:3206"
+    state: started
